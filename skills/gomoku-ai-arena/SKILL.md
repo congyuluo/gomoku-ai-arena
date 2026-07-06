@@ -68,6 +68,13 @@ Start the browser UI on a Tailscale-accessible interface:
 
 Then use `tailscale ip -4` to find the URL: `http://<tailscale-ip>:8765`.
 
+The browser UI supports independent Black/White controllers. Each side can be
+`Human` or any arena agent, so agents can validate human-vs-AI, AI-vs-AI, and
+mixed handoff flows. Player selector changes affect the next move without
+resetting the board. The center swap button exchanges the Black/White
+controllers. Pause invalidates in-flight AI responses and stops automatic
+AI-vs-AI play until resumed.
+
 Compare miniZero weight snapshots:
 
 ```bash

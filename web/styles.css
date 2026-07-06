@@ -243,6 +243,19 @@ fieldset legend {
   margin-top: 0;
 }
 
+.swap-row {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0 -4px;
+}
+
+.swap-row .icon-button {
+  width: 44px;
+  height: 34px;
+  min-height: 34px;
+  font-size: 22px;
+}
+
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -314,6 +327,11 @@ fieldset legend {
 
 .move-list strong {
   color: var(--ink);
+}
+
+.move-list span {
+  color: #7d8a82;
+  font-size: 12px;
 }
 
 @media (max-width: 820px) {

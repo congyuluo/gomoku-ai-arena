@@ -1,46 +1,63 @@
 const BLACK = 1;
 const WHITE = 2;
 const EMPTY = 0;
+const HUMAN = "human";
 
 const canvas = document.getElementById("boardCanvas");
 const ctx = canvas.getContext("2d");
 const statusText = document.getElementById("statusText");
-const agentSelect = document.getElementById("agentSelect");
 const boardSizeSelect = document.getElementById("boardSizeSelect");
+const blackPlayerSelect = document.getElementById("blackPlayerSelect");
+const whitePlayerSelect = document.getElementById("whitePlayerSelect");
+const swapPlayersButton = document.getElementById("swapPlayersButton");
 const newGameButton = document.getElementById("newGameButton");
+const pauseButton = document.getElementById("pauseButton");
 const undoButton = document.getElementById("undoButton");
 const moveList = document.getElementById("moveList");
 const thinkingOverlay = document.getElementById("thinkingOverlay");
-const humanScoreEl = document.getElementById("humanScore");
-const aiScoreEl = document.getElementById("aiScore");
+const blackScoreEl = document.getElementById("blackScore");
+const whiteScoreEl = document.getElementById("whiteScore");
 const drawScoreEl = document.getElementById("drawScore");
 
 const state = {
   size: 15,
   board: [],
-  human: BLACK,
-  ai: WHITE,
   turn: BLACK,
+  paused: false,
   gameOver: false,
   thinking: false,
   lastMove: null,
   hoverMove: null,
   winLine: null,
   history: [],
-  scores: { human: 0, ai: 0, draw: 0 },
+  scores: { black: 0, white: 0, draw: 0 },
+  aiRequestId: 0,
+  autoTimer: null,
 };
 
 function makeEmptyBoard(size) {
   return Array.from({ length: size }, () => Array(size).fill(EMPTY));
 }
 
-function selectedHumanColor() {
-  return Number(document.querySelector("input[name='humanColor']:checked").value);
+function playerName(player) {
+  return player === BLACK ? "Black" : "White";
 }
 
-function updateColorsFromControls() {
-  state.human = selectedHumanColor();
-  state.ai = state.human === BLACK ? WHITE : BLACK;
+function playerSelect(player) {
+  return player === BLACK ? blackPlayerSelect : whitePlayerSelect;
+}
+
+function controllerValue(player) {
+  return playerSelect(player).value;
+}
+
+function controllerLabel(player) {
+  const select = playerSelect(player);
+  return select.options[select.selectedIndex]?.textContent || select.value;
+}
+
+function isHumanPlayer(player) {
+  return controllerValue(player) === HUMAN;
 }
 
 function resizeCanvas() {
@@ -95,8 +112,8 @@ function drawBoard() {
   if (state.lastMove) {
     drawLastMove(state.lastMove, padding, step);
   }
-  if (state.hoverMove && !state.gameOver && !state.thinking && state.turn === state.human) {
-    drawPreviewStone(state.hoverMove, state.human, padding, step);
+  if (state.hoverMove && !state.gameOver && !state.thinking && !state.paused && isHumanPlayer(state.turn)) {
+    drawPreviewStone(state.hoverMove, state.turn, padding, step);
   }
   if (state.winLine) {
     drawWinLine(state.winLine, padding, step);
@@ -209,12 +226,13 @@ function canvasToPoint(event) {
   return [x, y];
 }
 
-function placeMove(move, player, source) {
+function placeMove(move, player, source, actor, elapsedMs = null) {
   const [x, y] = move;
   state.board[x][y] = player;
   state.lastMove = move;
-  state.history.push({ move, player, source });
-  appendMove(move, player, source);
+  state.hoverMove = null;
+  state.history.push({ move, player, source, actor, elapsedMs });
+  appendMove(move, player, source, actor, elapsedMs);
   const result = checkWinner();
   if (result.winner) {
     finishGame(result.winner, result.line);
@@ -227,11 +245,12 @@ function placeMove(move, player, source) {
   drawBoard();
 }
 
-function appendMove(move, player, source) {
+function appendMove(move, player, source, actor, elapsedMs = null) {
   const li = document.createElement("li");
-  const stone = player === BLACK ? "Black" : "White";
-  const actor = source === "human" ? "You" : "AI";
-  li.innerHTML = `<strong>${actor}</strong> ${stone} ${move[0] + 1},${move[1] + 1}`;
+  const side = playerName(player);
+  const actorLabel = actor || (source === HUMAN ? "Human" : "AI");
+  const timeLabel = elapsedMs === null ? "" : ` <span>${Number(elapsedMs).toFixed(1)} ms</span>`;
+  li.innerHTML = `<strong>${side}</strong> ${actorLabel} ${move[0] + 1},${move[1] + 1}${timeLabel}`;
   moveList.appendChild(li);
   moveList.scrollTop = moveList.scrollHeight;
 }
@@ -239,30 +258,35 @@ function appendMove(move, player, source) {
 function rebuildMoveList() {
   moveList.innerHTML = "";
   for (const entry of state.history) {
-    appendMove(entry.move, entry.player, entry.source);
+    appendMove(entry.move, entry.player, entry.source, entry.actor, entry.elapsedMs);
   }
 }
 
 function setStatusForTurn() {
   if (state.gameOver) return;
-  if (state.thinking) {
-    statusText.textContent = `${agentSelect.value} is choosing a move.`;
-  } else if (state.turn === state.human) {
-    statusText.textContent = `Your turn as ${state.human === BLACK ? "black" : "white"}.`;
+  const side = playerName(state.turn);
+  const label = controllerLabel(state.turn);
+  if (state.paused) {
+    statusText.textContent = `Paused. ${side} to move.`;
+  } else if (state.thinking) {
+    statusText.textContent = `${side} ${label} is choosing a move.`;
+  } else if (isHumanPlayer(state.turn)) {
+    statusText.textContent = `${side} human to move.`;
   } else {
-    statusText.textContent = `AI turn as ${state.ai === BLACK ? "black" : "white"}.`;
+    statusText.textContent = `${side} ${label} to move.`;
   }
 }
 
 function finishGame(winner, line) {
   state.gameOver = true;
   state.winLine = line;
-  if (winner === state.human) {
-    state.scores.human += 1;
-    statusText.textContent = "You win.";
-  } else if (winner === state.ai) {
-    state.scores.ai += 1;
-    statusText.textContent = "AI wins.";
+  clearAutoTimer();
+  if (winner === BLACK) {
+    state.scores.black += 1;
+    statusText.textContent = `Black wins with ${controllerLabel(BLACK)}.`;
+  } else if (winner === WHITE) {
+    state.scores.white += 1;
+    statusText.textContent = `White wins with ${controllerLabel(WHITE)}.`;
   } else {
     state.scores.draw += 1;
     statusText.textContent = "Draw.";
@@ -271,26 +295,76 @@ function finishGame(winner, line) {
 }
 
 function updateScoreboard() {
-  humanScoreEl.textContent = state.scores.human;
-  aiScoreEl.textContent = state.scores.ai;
+  blackScoreEl.textContent = state.scores.black;
+  whiteScoreEl.textContent = state.scores.white;
   drawScoreEl.textContent = state.scores.draw;
 }
 
+function updatePauseButton() {
+  const icon = pauseButton.querySelector("span");
+  if (state.paused) {
+    icon.textContent = "▶";
+    pauseButton.title = "Resume game";
+    pauseButton.setAttribute("aria-label", "Resume game");
+  } else {
+    icon.textContent = "⏸";
+    pauseButton.title = "Pause game";
+    pauseButton.setAttribute("aria-label", "Pause game");
+  }
+}
+
+function clearAutoTimer() {
+  if (state.autoTimer) {
+    window.clearTimeout(state.autoTimer);
+    state.autoTimer = null;
+  }
+}
+
+function scheduleTurn(delayMs = 180) {
+  clearAutoTimer();
+  if (state.gameOver || state.paused || state.thinking || isHumanPlayer(state.turn)) return;
+  state.autoTimer = window.setTimeout(requestAiMove, delayMs);
+}
+
+function invalidateAiRequest() {
+  state.aiRequestId += 1;
+  state.thinking = false;
+  thinkingOverlay.hidden = true;
+  clearAutoTimer();
+}
+
+function isCurrentAiRequest(requestId, player, spec) {
+  return (
+    requestId === state.aiRequestId &&
+    !state.paused &&
+    !state.gameOver &&
+    state.turn === player &&
+    controllerValue(player) === spec
+  );
+}
+
 async function requestAiMove() {
-  if (state.gameOver || state.thinking || state.turn !== state.ai) return;
+  if (state.gameOver || state.paused || state.thinking || isHumanPlayer(state.turn)) return;
+
+  const player = state.turn;
+  const spec = controllerValue(player);
+  const actor = controllerLabel(player);
+  const requestId = state.aiRequestId + 1;
+  state.aiRequestId = requestId;
   state.thinking = true;
   state.hoverMove = null;
   thinkingOverlay.hidden = false;
   setStatusForTurn();
+  drawBoard();
 
   try {
     const response = await fetch("/api/ai-move", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        agent: agentSelect.value,
+        agent: spec,
         board: state.board,
-        player: state.ai,
+        player,
         seed: Date.now() + state.history.length,
       }),
     });
@@ -298,21 +372,33 @@ async function requestAiMove() {
     if (!response.ok) {
       throw new Error(payload.error || "AI request failed");
     }
+    if (!isCurrentAiRequest(requestId, player, spec)) return;
+
+    state.thinking = false;
+    thinkingOverlay.hidden = true;
     if (payload.move) {
-      placeMove(payload.move, state.ai, "ai");
-      const ms = Number(payload.elapsed_ms || 0).toFixed(1);
+      placeMove(payload.move, player, "ai", actor, payload.elapsed_ms);
       if (!state.gameOver) {
-        statusText.textContent = `AI moved in ${ms} ms. Your turn.`;
+        statusText.textContent = `${playerName(player)} ${actor} moved.`;
       }
     } else if (payload.game_over) {
       finishGame(payload.winner, null);
     }
   } catch (error) {
-    statusText.textContent = `AI error: ${error.message}`;
+    if (requestId === state.aiRequestId) {
+      state.thinking = false;
+      state.paused = true;
+      thinkingOverlay.hidden = true;
+      updatePauseButton();
+      statusText.textContent = `AI error: ${error.message}`;
+    }
   } finally {
-    state.thinking = false;
-    thinkingOverlay.hidden = true;
-    drawBoard();
+    if (requestId === state.aiRequestId) {
+      state.thinking = false;
+      thinkingOverlay.hidden = true;
+      drawBoard();
+      scheduleTurn(220);
+    }
   }
 }
 
@@ -351,77 +437,100 @@ function isBoardFull() {
 }
 
 function newGame(keepScores = true) {
+  invalidateAiRequest();
   state.size = Number(boardSizeSelect.value);
-  updateColorsFromControls();
   state.board = makeEmptyBoard(state.size);
   state.turn = BLACK;
+  state.paused = false;
   state.gameOver = false;
-  state.thinking = false;
   state.lastMove = null;
   state.hoverMove = null;
   state.winLine = null;
   state.history = [];
   moveList.innerHTML = "";
   thinkingOverlay.hidden = true;
+  updatePauseButton();
   if (!keepScores) {
-    state.scores = { human: 0, ai: 0, draw: 0 };
+    state.scores = { black: 0, white: 0, draw: 0 };
     updateScoreboard();
   }
   resizeCanvas();
   setStatusForTurn();
-  if (state.ai === BLACK) {
-    window.setTimeout(requestAiMove, 180);
-  }
+  scheduleTurn(180);
 }
 
 function undoRound() {
   if (state.thinking || state.history.length === 0) return;
+  const wasPaused = state.paused;
+  invalidateAiRequest();
   if (state.gameOver) {
     revertFinishedScore();
   }
-  let removed = 0;
-  while (state.history.length > 0 && removed < 2) {
-    const entry = state.history.pop();
-    state.board[entry.move[0]][entry.move[1]] = EMPTY;
-    removed += 1;
-    if (entry.source === "human") break;
+
+  const removed = [];
+  const last = state.history.pop();
+  removed.push(last);
+  state.board[last.move[0]][last.move[1]] = EMPTY;
+
+  const previous = state.history[state.history.length - 1];
+  if (last.source === "ai" && previous?.source === HUMAN) {
+    const paired = state.history.pop();
+    removed.push(paired);
+    state.board[paired.move[0]][paired.move[1]] = EMPTY;
   }
+
+  const firstRemoved = removed[removed.length - 1];
   state.gameOver = false;
+  state.paused = wasPaused;
   state.winLine = null;
   state.hoverMove = null;
   state.lastMove = state.history.length ? state.history[state.history.length - 1].move : null;
-  state.turn = state.human;
+  state.turn = firstRemoved.player;
+  updatePauseButton();
   rebuildMoveList();
   setStatusForTurn();
   drawBoard();
+  scheduleTurn(220);
 }
 
 function revertFinishedScore() {
   const result = checkWinner();
-  if (result.winner === state.human) {
-    state.scores.human = Math.max(0, state.scores.human - 1);
-  } else if (result.winner === state.ai) {
-    state.scores.ai = Math.max(0, state.scores.ai - 1);
+  if (result.winner === BLACK) {
+    state.scores.black = Math.max(0, state.scores.black - 1);
+  } else if (result.winner === WHITE) {
+    state.scores.white = Math.max(0, state.scores.white - 1);
   } else if (isBoardFull()) {
     state.scores.draw = Math.max(0, state.scores.draw - 1);
   }
   updateScoreboard();
 }
 
+function togglePause() {
+  if (state.gameOver) return;
+  state.paused = !state.paused;
+  if (state.paused) {
+    invalidateAiRequest();
+  }
+  updatePauseButton();
+  setStatusForTurn();
+  drawBoard();
+  if (!state.paused) {
+    scheduleTurn(120);
+  }
+}
+
 function handleBoardClick(event) {
-  if (state.gameOver || state.thinking || state.turn !== state.human) return;
+  if (state.gameOver || state.paused || state.thinking || !isHumanPlayer(state.turn)) return;
   const move = canvasToPoint(event);
   if (!move) return;
   const [x, y] = move;
   if (state.board[x][y] !== EMPTY) return;
-  placeMove(move, state.human, "human");
-  if (!state.gameOver) {
-    window.setTimeout(requestAiMove, 160);
-  }
+  placeMove(move, state.turn, HUMAN, "Human");
+  scheduleTurn(160);
 }
 
 function handleBoardPointerMove(event) {
-  if (state.gameOver || state.thinking || state.turn !== state.human) {
+  if (state.gameOver || state.paused || state.thinking || !isHumanPlayer(state.turn)) {
     clearHoverMove();
     return;
   }
@@ -442,29 +551,56 @@ function clearHoverMove() {
   drawBoard();
 }
 
-async function loadAgents() {
-  const response = await fetch("/api/agents");
-  const payload = await response.json();
-  agentSelect.innerHTML = "";
-  for (const agent of payload.agents) {
+function populatePlayerSelect(select, agents, defaultValue) {
+  select.innerHTML = "";
+  const humanOption = document.createElement("option");
+  humanOption.value = HUMAN;
+  humanOption.textContent = "Human";
+  select.appendChild(humanOption);
+
+  for (const agent of agents) {
     const option = document.createElement("option");
     option.value = agent.spec;
     option.textContent = agent.label;
     option.title = agent.description;
-    agentSelect.appendChild(option);
+    select.appendChild(option);
   }
+
+  select.value = defaultValue;
+}
+
+async function loadAgents() {
+  const response = await fetch("/api/agents");
+  const payload = await response.json();
+  populatePlayerSelect(blackPlayerSelect, payload.agents, HUMAN);
+  populatePlayerSelect(whitePlayerSelect, payload.agents, "minizero:test");
+}
+
+function handleControllerChange() {
+  invalidateAiRequest();
+  state.hoverMove = null;
+  setStatusForTurn();
+  drawBoard();
+  scheduleTurn(120);
+}
+
+function swapPlayers() {
+  const blackValue = blackPlayerSelect.value;
+  blackPlayerSelect.value = whitePlayerSelect.value;
+  whitePlayerSelect.value = blackValue;
+  handleControllerChange();
 }
 
 canvas.addEventListener("click", handleBoardClick);
 canvas.addEventListener("pointermove", handleBoardPointerMove);
 canvas.addEventListener("pointerleave", clearHoverMove);
 newGameButton.addEventListener("click", () => newGame(true));
+pauseButton.addEventListener("click", togglePause);
 undoButton.addEventListener("click", undoRound);
+swapPlayersButton.addEventListener("click", swapPlayers);
 boardSizeSelect.addEventListener("change", () => newGame(true));
-agentSelect.addEventListener("change", () => newGame(true));
-document.querySelectorAll("input[name='humanColor']").forEach((input) => {
-  input.addEventListener("change", () => newGame(true));
-});
+blackPlayerSelect.addEventListener("change", handleControllerChange);
+whitePlayerSelect.addEventListener("change", handleControllerChange);
 window.addEventListener("resize", resizeCanvas);
 
 loadAgents()

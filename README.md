@@ -17,8 +17,9 @@ can open it:
 ```
 
 Then open `http://<tailscale-ip>:8765` from your Mac. The UI supports the same
-arena agent specs, board sizes, human black/white selection, move history, undo,
-and persistent score counters.
+arena agent specs, board sizes, independent Black/White player selection,
+human-vs-AI, AI-vs-AI, pause/resume, mid-game model swapping, move history,
+undo, and persistent score counters.
 
 ## Setup
 

@@ -9,6 +9,10 @@ For browser-based human-vs-AI play, run:
 python3 serve.py --host 0.0.0.0 --port 8765
 ```
 
+The browser UI can also run AI-vs-AI games. Set each side independently in the
+Black and White selectors, use the center swap button to exchange side
+controllers, and use pause/resume to stop or continue automatic AI play.
+
 ## Agents
 
 Built-in specs:
