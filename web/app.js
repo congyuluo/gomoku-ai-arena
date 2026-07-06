@@ -24,6 +24,7 @@ const state = {
   gameOver: false,
   thinking: false,
   lastMove: null,
+  hoverMove: null,
   winLine: null,
   history: [],
   scores: { human: 0, ai: 0, draw: 0 },
@@ -94,6 +95,9 @@ function drawBoard() {
   if (state.lastMove) {
     drawLastMove(state.lastMove, padding, step);
   }
+  if (state.hoverMove && !state.gameOver && !state.thinking && state.turn === state.human) {
+    drawPreviewStone(state.hoverMove, state.human, padding, step);
+  }
   if (state.winLine) {
     drawWinLine(state.winLine, padding, step);
   }
@@ -155,6 +159,25 @@ function drawLastMove(move, padding, step) {
   ctx.lineWidth = 2.5;
   ctx.beginPath();
   ctx.arc(cx, cy, Math.max(5, step * 0.16), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPreviewStone(move, player, padding, step) {
+  const [x, y] = move;
+  const cx = padding + x * step;
+  const cy = padding + y * step;
+  const radius = Math.max(8, step * 0.42);
+
+  ctx.save();
+  ctx.globalAlpha = 0.38;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.fillStyle = player === BLACK ? "#111614" : "#fbfbf5";
+  ctx.fill();
+  ctx.globalAlpha = 0.7;
+  ctx.strokeStyle = player === BLACK ? "#030504" : "#9f9f96";
+  ctx.lineWidth = 1.2;
   ctx.stroke();
   ctx.restore();
 }
@@ -256,6 +279,7 @@ function updateScoreboard() {
 async function requestAiMove() {
   if (state.gameOver || state.thinking || state.turn !== state.ai) return;
   state.thinking = true;
+  state.hoverMove = null;
   thinkingOverlay.hidden = false;
   setStatusForTurn();
 
@@ -334,6 +358,7 @@ function newGame(keepScores = true) {
   state.gameOver = false;
   state.thinking = false;
   state.lastMove = null;
+  state.hoverMove = null;
   state.winLine = null;
   state.history = [];
   moveList.innerHTML = "";
@@ -360,6 +385,7 @@ function undoRound() {
   }
   state.gameOver = false;
   state.winLine = null;
+  state.hoverMove = null;
   state.lastMove = state.history.length ? state.history[state.history.length - 1].move : null;
   state.turn = state.human;
   rebuildMoveList();
@@ -379,6 +405,28 @@ function handleBoardClick(event) {
   }
 }
 
+function handleBoardPointerMove(event) {
+  if (state.gameOver || state.thinking || state.turn !== state.human) {
+    clearHoverMove();
+    return;
+  }
+  const move = canvasToPoint(event);
+  if (!move || state.board[move[0]][move[1]] !== EMPTY) {
+    clearHoverMove();
+    return;
+  }
+  if (!state.hoverMove || state.hoverMove[0] !== move[0] || state.hoverMove[1] !== move[1]) {
+    state.hoverMove = move;
+    drawBoard();
+  }
+}
+
+function clearHoverMove() {
+  if (!state.hoverMove) return;
+  state.hoverMove = null;
+  drawBoard();
+}
+
 async function loadAgents() {
   const response = await fetch("/api/agents");
   const payload = await response.json();
@@ -393,6 +441,8 @@ async function loadAgents() {
 }
 
 canvas.addEventListener("click", handleBoardClick);
+canvas.addEventListener("pointermove", handleBoardPointerMove);
+canvas.addEventListener("pointerleave", clearHoverMove);
 newGameButton.addEventListener("click", () => newGame(true));
 undoButton.addEventListener("click", undoRound);
 boardSizeSelect.addEventListener("change", () => newGame(true));
