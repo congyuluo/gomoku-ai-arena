@@ -3,6 +3,12 @@
 `arena.py` runs headless AI-vs-AI Gomoku matches using the existing `Gomoku`
 state and win detection. The original Pygame UI in `run.py` is unchanged.
 
+For browser-based human-vs-AI play, run:
+
+```bash
+python3 serve.py --host 0.0.0.0 --port 8765
+```
+
 ## Agents
 
 Built-in specs:

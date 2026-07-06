@@ -16,6 +16,9 @@ each move, alternates sides when requested, and reports scores.
 ## Repository Map
 
 - `arena.py`: headless match runner, built-in agents, miniZero adapter, CLI.
+- `serve.py`: standard-library HTTP server for the browser UI and JSON AI move
+  endpoint.
+- `web/`: static HTML/CSS/JS browser UI for human-vs-AI play.
 - `Gomoku_Game.py`: board state, win detection, game-over detection.
 - `miniZero.py`: legacy minimax/value-network AI. It assumes its own stones are
   player `1`; use the arena adapter rather than calling it directly for white.
@@ -56,6 +59,14 @@ Smoke test the legacy miniZero adapter:
 ```bash
 .venv/bin/python arena.py --black minizero:test --white random --games 1 --board-size 9 --seed 7 --verbose
 ```
+
+Start the browser UI on a Tailscale-accessible interface:
+
+```bash
+.venv/bin/python serve.py --host 0.0.0.0 --port 8765
+```
+
+Then use `tailscale ip -4` to find the URL: `http://<tailscale-ip>:8765`.
 
 Compare miniZero weight snapshots:
 

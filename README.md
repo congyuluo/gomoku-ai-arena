@@ -7,6 +7,19 @@ score summaries for quick model or heuristic comparisons.
 The original Pygame UI remains available in `run.py`; the arena entry point is
 `arena.py`.
 
+## Browser UI
+
+Start the web UI on all interfaces so another device on your Tailscale network
+can open it:
+
+```bash
+.venv/bin/python serve.py --host 0.0.0.0 --port 8765
+```
+
+Then open `http://<tailscale-ip>:8765` from your Mac. The UI supports the same
+arena agent specs, board sizes, human black/white selection, move history, undo
+before game end, and persistent score counters.
+
 ## Setup
 
 ```bash

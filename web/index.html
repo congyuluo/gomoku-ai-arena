@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gomoku AI Arena</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Gomoku AI Arena</h1>
+        <p id="statusText">Choose an AI and start a game.</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="newGameButton" class="primary-button" type="button">New Game</button>
+        <button id="undoButton" class="icon-button" type="button" title="Undo last round" aria-label="Undo last round">
+          <span aria-hidden="true">↶</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="board-zone" aria-label="Gomoku board">
+        <div class="board-shell">
+          <canvas id="boardCanvas" aria-label="Interactive Gomoku board"></canvas>
+          <div id="thinkingOverlay" class="thinking-overlay" hidden>
+            <div class="thinking-panel">
+              <div class="spinner"></div>
+              <span>AI thinking</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel" aria-label="Game controls">
+        <section class="control-section">
+          <h2>Match</h2>
+          <label for="agentSelect">AI</label>
+          <select id="agentSelect"></select>
+
+          <label for="boardSizeSelect">Board</label>
+          <select id="boardSizeSelect">
+            <option value="9">9 x 9</option>
+            <option value="13">13 x 13</option>
+            <option value="15" selected>15 x 15</option>
+          </select>
+
+          <fieldset>
+            <legend>Your stones</legend>
+            <div class="segmented">
+              <label>
+                <input type="radio" name="humanColor" value="1" checked>
+                <span>Black</span>
+              </label>
+              <label>
+                <input type="radio" name="humanColor" value="2">
+                <span>White</span>
+              </label>
+            </div>
+          </fieldset>
+        </section>
+
+        <section class="control-section compact">
+          <h2>Score</h2>
+          <div class="score-grid">
+            <span>You</span>
+            <strong id="humanScore">0</strong>
+            <span>AI</span>
+            <strong id="aiScore">0</strong>
+            <span>Draws</span>
+            <strong id="drawScore">0</strong>
+          </div>
+        </section>
+
+        <section class="control-section move-section">
+          <h2>Moves</h2>
+          <ol id="moveList" class="move-list"></ol>
+        </section>
+      </aside>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
