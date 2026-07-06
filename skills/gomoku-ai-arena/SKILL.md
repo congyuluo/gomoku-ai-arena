@@ -19,6 +19,8 @@ each move, alternates sides when requested, and reports scores.
 - `serve.py`: standard-library HTTP server for the browser UI and JSON AI move
   endpoint.
 - `web/`: static HTML/CSS/JS browser UI for human-vs-AI play.
+- `cpp_minizero/`: C++ miniZero implementation using exported active weights,
+  plus a Python parity/speed harness.
 - `Gomoku_Game.py`: board state, win detection, game-over detection.
 - `miniZero.py`: legacy minimax/value-network AI. It assumes its own stones are
   player `1`; use the arena adapter rather than calling it directly for white.
@@ -80,6 +82,18 @@ Compare miniZero weight snapshots:
 ```bash
 .venv/bin/python arena.py --agents minizero:test:current,minizero:test:original,minizero:test:65 --games 2 --seed 7
 ```
+
+Build and verify native miniZero:
+
+```bash
+make -C cpp_minizero
+.venv/bin/python cpp_minizero/tools/compare_native.py --positions 100 --levels test EASY --board-size 9 --seed 123
+```
+
+Use native specs such as `native-minizero:test` and `native-minizero:EASY` in
+the CLI or browser UI when speed matters. The parity harness compares non-empty
+positions because Python miniZero's empty-board first move is random; the arena
+wrapper preserves that first-move behavior with the arena RNG.
 
 Use `minizero:test` for quick validation. `minizero:EASY` and especially
 `minizero:MEDIUM` can be much slower because the legacy minimax branches heavily.

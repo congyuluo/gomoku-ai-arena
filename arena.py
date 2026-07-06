@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import random
+import subprocess
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
@@ -144,6 +146,51 @@ class MiniZeroAgent(Agent):
             random.setstate(global_state)
 
         return int(move[0]), int(move[1])
+
+
+class NativeMiniZeroAgent(Agent):
+    def __init__(self, level: str = "test"):
+        self.level = normalize_level(level)
+        self.name = f"native-minizero:{self.level.lower()}"
+        self.engine = ensure_native_engine()
+        self.process = subprocess.Popen(
+            [str(self.engine), "--batch"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+        atexit.register(self.close)
+
+    def close(self) -> None:
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=1)
+
+    def select_move(self, game: Gomoku, player: int, rng: random.Random) -> Move:
+        normalized = normalize_for_player(game, player)
+        if not np.count_nonzero(normalized.board):
+            return rng.randint(2, len(normalized.board[0]) - 3), rng.randint(2, len(normalized.board[0]) - 3)
+
+        board_text = "".join(str(int(value)) for value in normalized.board.reshape(-1))
+        request = f"{self.level} {len(normalized.board)} {board_text}\n"
+        if self.process.stdin is None or self.process.stdout is None:
+            raise RuntimeError("native miniZero process is not connected")
+        self.process.stdin.write(request)
+        self.process.stdin.flush()
+        response = self.process.stdout.readline().strip()
+        if not response:
+            stderr = self.process.stderr.read() if self.process.stderr is not None else ""
+            raise RuntimeError(f"native miniZero exited without a move: {stderr}")
+        parts = response.split()
+        if parts[0] == "ERR":
+            raise RuntimeError(" ".join(parts[1:]))
+        return int(parts[0]), int(parts[1])
 
 
 def legal_moves(game: Gomoku) -> List[Move]:
@@ -337,6 +384,14 @@ def resolve_weights(weights: str) -> Path:
     return path
 
 
+def ensure_native_engine() -> Path:
+    repo_root = Path(__file__).resolve().parent
+    engine = repo_root / "cpp_minizero" / "minizero_native"
+    if not engine.exists():
+        subprocess.run(["make", "-C", str(repo_root / "cpp_minizero")], check=True)
+    return engine
+
+
 def normalize_level(level: str) -> str:
     if level.lower() == "test":
         return "test"
@@ -357,6 +412,10 @@ def make_agent(spec: str) -> Agent:
         level = parts[1] if len(parts) > 1 and parts[1] else "EASY"
         weights = parts[2] if len(parts) > 2 and parts[2] else "current"
         return MiniZeroAgent(level=level, weights=weights)
+    if key.startswith("native-minizero") or key.startswith("native_minizero"):
+        parts = normalized.split(":")
+        level = parts[1] if len(parts) > 1 and parts[1] else "test"
+        return NativeMiniZeroAgent(level=level)
     raise ValueError(f"unknown agent spec {spec!r}")
 
 
@@ -391,6 +450,9 @@ def list_agents() -> None:
     print("  minizero:EASY[:current|original|65]")
     print("  minizero:MEDIUM[:current|original|65]")
     print("  minizero:test[:current|original|65]")
+    print("  native-minizero:test")
+    print("  native-minizero:EASY")
+    print("  native-minizero:MEDIUM")
 
 
 def parse_args() -> argparse.Namespace:

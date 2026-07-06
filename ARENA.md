@@ -23,10 +23,18 @@ Built-in specs:
 - `minizero:EASY[:current|original|65]`: legacy miniZero at depth 2.
 - `minizero:MEDIUM[:current|original|65]`: legacy miniZero at depth 3.
 - `minizero:test[:current|original|65]`: legacy miniZero at depth 1.
+- `native-minizero:test`: C++ miniZero at depth 1 using the active weights.
+- `native-minizero:EASY`: C++ miniZero at depth 2 using the active weights.
+- `native-minizero:MEDIUM`: C++ miniZero at depth 3 using the active weights.
 
 The miniZero wrapper normalizes board perspective, so miniZero can play as
 either black/player 1 or white/player 2 even though the original code assumes
 it is always player 1.
+
+The native miniZero wrapper applies the same perspective normalization and uses
+the same random first-move behavior as the Python wrapper. Use
+`cpp_minizero/tools/compare_native.py` to verify exact move parity on sampled
+non-empty positions.
 
 ## Examples
 
