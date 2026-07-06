@@ -66,6 +66,10 @@ Omit `--workers` to use the detected CPU count. The default chunk size creates
 one task per worker to reuse agent instances; set `--chunk-size` manually when
 you want finer load balancing.
 
+For RL training data, add `--rl-out results/file.jsonl`. This streams one compact
+JSON object per completed game, with moves encoded as `x * board_size + y` and
+players implied by alternating turns from black.
+
 Compare bundled miniZero weight snapshots:
 
 ```bash

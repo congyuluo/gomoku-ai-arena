@@ -75,6 +75,10 @@ default `--chunk-size` creates one task per worker so native agents are reused
 inside each worker. Use smaller chunks for finer load balancing when games have
 very uneven runtimes.
 
+For RL datasets, prefer `--rl-out results/name.jsonl`. It streams compact records
+as games finish, so interrupted long runs keep completed games. Moves are encoded
+as `x * board_size + y`; black moves first and players alternate by index.
+
 Start the browser UI on a Tailscale-accessible interface:
 
 ```bash

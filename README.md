@@ -129,6 +129,17 @@ forfeit the game, which makes adapters easier to debug.
 `batch_arena.py` prints the same score table plus wall-clock throughput. Add
 `--json-out results.json` for machine-readable summaries.
 
+For reinforcement-learning data, prefer compact streaming JSONL:
+
+```bash
+.venv/bin/python batch_arena.py --black native-minizero:MEDIUM --white native-minizero:EASY --games 500 --workers 24 --chunk-size 1 --alternate-sides --seed 7 --progress --rl-out results/native_medium_vs_easy_500_seed7.jsonl
+```
+
+`--rl-out` writes one line per completed game immediately. Each line stores
+`n` for board size, black/white model names, winner, seed, and `moves` as compact
+point indices where `point = x * n + y`. Players are implicit by move order,
+starting with black.
+
 ## Agent Skill
 
 Future Codex agents should use the bundled skill at
