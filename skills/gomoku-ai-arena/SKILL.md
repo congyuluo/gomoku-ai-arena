@@ -16,6 +16,8 @@ each move, alternates sides when requested, and reports scores.
 ## Repository Map
 
 - `arena.py`: headless match runner, built-in agents, miniZero adapter, CLI.
+- `batch_arena.py`: multiprocessing batch runner for parallel AI-vs-AI games
+  across CPU workers.
 - `serve.py`: standard-library HTTP server for the browser UI and JSON AI move
   endpoint.
 - `web/`: static HTML/CSS/JS browser UI for human-vs-AI play.
@@ -62,6 +64,17 @@ Smoke test the legacy miniZero adapter:
 .venv/bin/python arena.py --black minizero:test --white random --games 1 --board-size 9 --seed 7 --verbose
 ```
 
+Run a parallel batch using CPU workers:
+
+```bash
+.venv/bin/python batch_arena.py --black native-minizero:test --white random --games 100 --workers 8 --alternate-sides --seed 7
+```
+
+If `--workers` is omitted, `batch_arena.py` uses the detected CPU count. The
+default `--chunk-size` creates one task per worker so native agents are reused
+inside each worker. Use smaller chunks for finer load balancing when games have
+very uneven runtimes.
+
 Start the browser UI on a Tailscale-accessible interface:
 
 ```bash
@@ -80,7 +93,7 @@ AI-vs-AI play until resumed.
 Compare miniZero weight snapshots:
 
 ```bash
-.venv/bin/python arena.py --agents minizero:test:current,minizero:test:original,minizero:test:65 --games 2 --seed 7
+.venv/bin/python arena.py --agents minizero:test:current,minizero:test:65 --games 2 --seed 7
 ```
 
 Build and verify native miniZero:

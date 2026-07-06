@@ -58,7 +58,24 @@ Run a fixed head-to-head:
 Compare bundled miniZero weight snapshots:
 
 ```bash
-.venv/bin/python arena.py --agents minizero:test:current,minizero:test:original,minizero:test:65 --games 2 --seed 7
+.venv/bin/python arena.py --agents minizero:test:current,minizero:test:65 --games 2 --seed 7
+```
+
+Run games in parallel across CPU workers:
+
+```bash
+.venv/bin/python batch_arena.py --black native-minizero:test --white random --games 100 --workers 8 --alternate-sides --seed 7
+```
+
+If `--workers` is omitted, the batch runner uses the detected CPU count. By
+default it creates one chunk per worker so agents can be cached and reused within
+each worker process. Use `--chunk-size` to trade agent reuse for finer load
+balancing.
+
+Run a parallel round robin:
+
+```bash
+.venv/bin/python batch_arena.py --agents native-minizero:test,minizero:test:65,random --games 20 --workers 8 --seed 7
 ```
 
 ## Built-In Agents
@@ -108,6 +125,9 @@ extractor produces 66.
 The summary includes games, wins, losses, draws, win rate, average milliseconds
 per move, and illegal-move losses. Illegal or out-of-bounds moves immediately
 forfeit the game, which makes adapters easier to debug.
+
+`batch_arena.py` prints the same score table plus wall-clock throughput. Add
+`--json-out results.json` for machine-readable summaries.
 
 ## Agent Skill
 

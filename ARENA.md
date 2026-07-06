@@ -56,10 +56,20 @@ Run a fixed head-to-head:
 python3 arena.py --black minizero:test --white random --games 2 --board-size 15 --seed 7 --verbose
 ```
 
+Run a parallel head-to-head batch:
+
+```bash
+python3 batch_arena.py --black native-minizero:test --white random --games 100 --workers 8 --alternate-sides --seed 7
+```
+
+Omit `--workers` to use the detected CPU count. The default chunk size creates
+one task per worker to reuse agent instances; set `--chunk-size` manually when
+you want finer load balancing.
+
 Compare bundled miniZero weight snapshots:
 
 ```bash
-python3 arena.py --agents minizero:test:current,minizero:test:original,minizero:test:65 --games 2 --seed 7
+python3 arena.py --agents minizero:test:current,minizero:test:65 --games 2 --seed 7
 ```
 
 The summary reports games, wins, losses, draws, win rate, average milliseconds
