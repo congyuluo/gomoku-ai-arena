@@ -1,0 +1,7 @@
+interface:
+  display_name: "Gomoku AI Arena"
+  short_description: "Run and extend Gomoku AI benchmarks"
+  default_prompt: "Use $gomoku-ai-arena to run a seeded Gomoku AI benchmark and summarize the results."
+
+policy:
+  allow_implicit_invocation: true
