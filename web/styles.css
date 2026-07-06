@@ -157,6 +157,10 @@ h2 {
   background: rgb(251 252 248 / 34%);
 }
 
+.thinking-overlay[hidden] {
+  display: none;
+}
+
 .thinking-panel {
   display: flex;
   align-items: center;
