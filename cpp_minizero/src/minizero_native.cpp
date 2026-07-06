@@ -51,6 +51,9 @@ struct Pattern {
     int index;
 };
 
+std::vector<int>* g_generation_trace = nullptr;
+std::size_t g_generation_trace_limit = 0;
+
 constexpr Pattern kSelfPatterns[] = {
     {"00001", 0}, {"00010", 1}, {"00011", 2}, {"00100", 3}, {"00101", 4}, {"00110", 5},
     {"00111", 6}, {"01001", 7}, {"01010", 8}, {"01011", 9}, {"01101", 10}, {"01110", 11},
@@ -112,6 +115,10 @@ bool in_range_2(const Board& board, int x, int y) {
 }
 
 std::vector<Child> get_positions_2(const Board& parent, int player) {
+    if (g_generation_trace != nullptr && g_generation_trace->size() < g_generation_trace_limit) {
+        g_generation_trace->push_back(player);
+    }
+
     std::vector<Child> children;
     for (int x = 0; x < parent.size; ++x) {
         for (int y = 0; y < parent.size; ++y) {
@@ -255,17 +262,31 @@ float minimax_value(const Board& position, int depth, float alpha, float beta, b
         return predict(get_feature(position, maximizing_player));
     }
 
-    float min_eval = std::numeric_limits<float>::infinity();
-    const auto children = get_positions_2(position, kOpponent);
-    for (const auto& child : children) {
-        const float evaluation = minimax_value(child.board, depth - 1, alpha, beta, true);
-        min_eval = std::min(min_eval, evaluation);
-        beta = std::min(beta, evaluation);
-        if (beta <= alpha) {
-            break;
+    if (maximizing_player) {
+        float max_eval = -std::numeric_limits<float>::infinity();
+        const auto children = get_positions_2(position, kSelf);
+        for (const auto& child : children) {
+            const float evaluation = minimax_value(child.board, depth - 1, alpha, beta, false);
+            max_eval = std::max(max_eval, evaluation);
+            alpha = std::max(alpha, evaluation);
+            if (beta <= alpha) {
+                break;
+            }
         }
+        return max_eval;
+    } else {
+        float min_eval = std::numeric_limits<float>::infinity();
+        const auto children = get_positions_2(position, kOpponent);
+        for (const auto& child : children) {
+            const float evaluation = minimax_value(child.board, depth - 1, alpha, beta, true);
+            min_eval = std::min(min_eval, evaluation);
+            beta = std::min(beta, evaluation);
+            if (beta <= alpha) {
+                break;
+            }
+        }
+        return min_eval;
     }
-    return min_eval;
 }
 
 Move choose_move(const Board& position, int depth) {
@@ -361,10 +382,38 @@ void run_batch() {
     }
 }
 
+void run_self_test() {
+    Board board(5);
+    board.at(2, 2) = kSelf;
+
+    std::vector<int> trace;
+    g_generation_trace = &trace;
+    g_generation_trace_limit = 3;
+    (void)choose_move(board, level_to_depth("MEDIUM"));
+    g_generation_trace = nullptr;
+    g_generation_trace_limit = 0;
+
+    const std::vector<int> expected = {kSelf, kOpponent, kSelf};
+    if (trace != expected) {
+        std::string actual;
+        for (int player : trace) {
+            if (!actual.empty()) actual += ',';
+            actual += std::to_string(player);
+        }
+        throw std::runtime_error("MEDIUM minimax generation order mismatch: " + actual);
+    }
+
+    std::cout << "OK medium alternates 1,2,1\n";
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     try {
+        if (has_arg(argc, argv, "--self-test")) {
+            run_self_test();
+            return 0;
+        }
         if (has_arg(argc, argv, "--batch")) {
             run_batch();
             return 0;

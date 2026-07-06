@@ -138,7 +138,16 @@ def _miniZero(position: Gomoku, depth: int, alpha: int, beta: int, maximizingPla
         # Pick a child for result
         return best_move
 
-    # Minimizing AI score (Maximizing player score)
+    elif maximizingPlayer:
+        maxEvaluation = -math.inf
+        child_objects = get_positions_2(position, 1)
+        for child in child_objects:
+            evaluation = _miniZero(child, depth - 1, alpha, beta, False, predictor=predictor)
+            maxEvaluation, alpha = max(maxEvaluation, evaluation), max(alpha, evaluation)
+            if beta <= alpha:
+                break
+        return maxEvaluation
+
     else:
         minEvaluation = math.inf
         child_objects = get_positions_2(position, 2)
