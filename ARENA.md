@@ -20,9 +20,9 @@ Built-in specs:
 - `first`: first legal point in board scan order.
 - `random`: uniformly random legal point.
 - `center`: closest legal point to the board center.
-- `minizero:EASY[:current|original|65]`: legacy miniZero at depth 2.
-- `minizero:MEDIUM[:current|original|65]`: legacy miniZero at depth 3.
-- `minizero:test[:current|original|65]`: legacy miniZero at depth 1.
+- `minizero:EASY[:current|65]`: legacy miniZero at depth 2.
+- `minizero:MEDIUM[:current|65]`: legacy miniZero at depth 3.
+- `minizero:test[:current|65]`: legacy miniZero at depth 1.
 - `native-minizero:test`: C++ miniZero at depth 1 using the active weights.
 - `native-minizero:EASY`: C++ miniZero at depth 2 using the active weights.
 - `native-minizero:MEDIUM`: C++ miniZero at depth 3 using the active weights.
@@ -64,3 +64,7 @@ python3 arena.py --agents minizero:test:current,minizero:test:original,minizero:
 
 The summary reports games, wins, losses, draws, win rate, average milliseconds
 per move, and illegal-move losses.
+
+The archived `numpy_network_weights original.npz` file is present in the repo
+but not listed as playable because it has a 69-feature input shape, unlike the
+current 66-feature miniZero extractor.

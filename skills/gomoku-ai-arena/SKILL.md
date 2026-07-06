@@ -95,6 +95,10 @@ the CLI or browser UI when speed matters. The parity harness compares non-empty
 positions because Python miniZero's empty-board first move is random; the arena
 wrapper preserves that first-move behavior with the arena RNG.
 
+Do not expose `numpy_network_weights original.npz` as a normal playable model
+unless a matching 69-feature extractor is recovered. The file is archived in the
+repo, but the current extractor produces 66 features.
+
 Use `minizero:test` for quick validation. `minizero:EASY` and especially
 `minizero:MEDIUM` can be much slower because the legacy minimax branches heavily.
 

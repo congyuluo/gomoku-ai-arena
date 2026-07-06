@@ -66,9 +66,9 @@ Compare bundled miniZero weight snapshots:
 - `first`: first legal board point in scan order.
 - `random`: uniformly random legal point.
 - `center`: closest legal point to the board center.
-- `minizero:EASY[:current|original|65]`: legacy miniZero at depth 2.
-- `minizero:MEDIUM[:current|original|65]`: legacy miniZero at depth 3.
-- `minizero:test[:current|original|65]`: legacy miniZero at depth 1.
+- `minizero:EASY[:current|65]`: legacy miniZero at depth 2.
+- `minizero:MEDIUM[:current|65]`: legacy miniZero at depth 3.
+- `minizero:test[:current|65]`: legacy miniZero at depth 1.
 - `native-minizero:test`: C++ miniZero at depth 1 using the active weights.
 - `native-minizero:EASY`: C++ miniZero at depth 2 using the active weights.
 - `native-minizero:MEDIUM`: C++ miniZero at depth 3 using the active weights.
@@ -97,6 +97,11 @@ Run the parity and speed harness:
 The parity harness skips empty boards because the original Python implementation
 uses a random first move. In the arena wrapper, native miniZero preserves that
 empty-board behavior with the arena RNG.
+
+The repository still includes the archived `numpy_network_weights original.npz`
+file from the prior miniZero code. It is not exposed as a playable arena model
+because it expects 69 input features, while the current miniZero feature
+extractor produces 66.
 
 ## Output
 
