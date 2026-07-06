@@ -375,7 +375,10 @@ function newGame(keepScores = true) {
 }
 
 function undoRound() {
-  if (state.thinking || state.gameOver || state.history.length === 0) return;
+  if (state.thinking || state.history.length === 0) return;
+  if (state.gameOver) {
+    revertFinishedScore();
+  }
   let removed = 0;
   while (state.history.length > 0 && removed < 2) {
     const entry = state.history.pop();
@@ -391,6 +394,18 @@ function undoRound() {
   rebuildMoveList();
   setStatusForTurn();
   drawBoard();
+}
+
+function revertFinishedScore() {
+  const result = checkWinner();
+  if (result.winner === state.human) {
+    state.scores.human = Math.max(0, state.scores.human - 1);
+  } else if (result.winner === state.ai) {
+    state.scores.ai = Math.max(0, state.scores.ai - 1);
+  } else if (isBoardFull()) {
+    state.scores.draw = Math.max(0, state.scores.draw - 1);
+  }
+  updateScoreboard();
 }
 
 function handleBoardClick(event) {
